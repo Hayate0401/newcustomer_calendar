@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>入会者カレンダー</title>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;600&family=DM+Mono:wght@400;500&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink:        #0c1e35;
+  --ink-soft:   #3a5068;
+  --sky:        #1a6cff;
+  --sky-light:  #deeaff;
+  --sky-pale:   #f2f7ff;
+  --teal:       #00bfae;
+  --white:      #ffffff;
+  --border:     #d8e6f5;
+  --muted:      #8ba5be;
+  --surface:    #f7fafd;
+  --card-r:     10px;
+  --page-r:     18px;
+  --shadow-sm:  0 2px 10px rgba(26,108,255,.10);
+  --shadow-md:  0 8px 32px rgba(26,108,255,.16);
+  --shadow-lg:  0 20px 60px rgba(12,30,53,.20);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  background: var(--surface);
+  color: var(--ink);
+  min-height: 100vh;
+  padding: 40px 20px 80px;
+  background-image: radial-gradient(circle, #c8daf0 1px, transparent 1px);
+  background-size: 28px 28px;
+  /* 横スクロールを防ぐ */
+  overflow-x: hidden;
+}
+
+/* ── HEADER ── */
+.page-header {
+  max-width: 1160px;
+  margin: 0 auto 28px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.header-left { display: flex; align-items: center; gap: 18px; }
+.logo-mark {
+  width: 52px; height: 52px;
+  background: linear-gradient(140deg, var(--sky) 0%, var(--teal) 100%);
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+  box-shadow: 0 6px 20px rgba(26,108,255,.35);
+  flex-shrink: 0;
+}
+.header-text h1 {
+  font-family: 'Shippori Mincho', serif;
+  font-size: 1.55rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  line-height: 1.2;
+}
+.header-text p {
+  font-size: .7rem;
+  color: var(--muted);
+  margin-top: 3px;
+  font-weight: 300;
+  letter-spacing: .1em;
+}
+.reload-btn {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 40px;
+  padding: 9px 20px;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: .75rem;
+  font-weight: 500;
+  color: var(--sky);
+  cursor: pointer;
+  display: flex; align-items: center; gap: 7px;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow .2s, transform .15s;
+}
+.reload-btn:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.reload-btn svg { width: 14px; height: 14px; }
+
+/* ── STATS ── */
+.stats-strip {
+  max-width: 1160px;
+  margin: 0 auto 20px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.stat-chip {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 40px;
+  padding: 7px 16px;
+  font-size: .73rem;
+  color: var(--ink-soft);
+  box-shadow: var(--shadow-sm);
+  display: flex; align-items: center; gap: 6px;
+}
+.stat-chip b { color: var(--sky); font-weight: 700; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--sky); flex-shrink: 0; }
+
+/* ── CALENDAR CARD ── */
+.cal-card {
+  max-width: 1160px;
+  margin: 0 auto;
+  background: var(--white);
+  border-radius: var(--page-r);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border);
+  overflow: visible; /* hiddenだと土曜列が切れるため変更 */
+  /* 角丸を維持するために子要素にclipを適用 */
+}
+
+/* ナビバーの角丸を維持 */
+.cal-nav {
+  border-radius: var(--page-r) var(--page-r) 0 0;
+}
+
+/* グリッド最終行の角丸 */
+.cal-grid .day-cell:nth-last-child(-n+7):first-child,
+.cal-grid .day-cell:last-child {
+  border-radius: 0 0 var(--page-r) 0;
+}
+.cal-grid .day-cell:nth-last-child(7) {
+  border-radius: 0 0 0 var(--page-r);
+}
+
+.cal-nav {
+  background: linear-gradient(120deg, var(--ink) 0%, #1a3a5c 100%);
+  padding: 22px 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.month-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 1.6rem;
+  font-weight: 500;
+  color: var(--white);
+  letter-spacing: .06em;
+  text-align: center;
+}
+.year-sub {
+  font-size: .68rem;
+  color: rgba(255,255,255,.45);
+  letter-spacing: .12em;
+  margin-top: 2px;
+  text-align: center;
+}
+.nav-btn {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(255,255,255,.08);
+  color: #fff;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem;
+  transition: background .2s, transform .15s;
+  line-height: 1;
+}
+.nav-btn:hover { background: rgba(255,255,255,.2); transform: scale(1.08); }
+
+.dow-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: var(--sky-pale);
+  border-bottom: 1px solid var(--border);
+}
+.dow-cell {
+  text-align: center;
+  padding: 11px 0;
+  font-size: .65rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  color: var(--ink-soft);
+}
+.dow-cell:first-child { color: #d94f4f; }
+.dow-cell:last-child  { color: var(--sky); }
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-auto-rows: auto;
+  align-items: stretch;
+}
+.day-cell {
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  min-height: 118px;
+  padding: 9px 8px 8px;
+  transition: background .15s;
+  display: flex;
+  flex-direction: column;
+  min-width: 0; /* グリッドセルが内容で広がらないよう制限 */
+  overflow: hidden;
+}
+.day-cell:nth-child(7n) { border-right: none; }
+.day-cell.other-month   { background: #fafcff; }
+.day-cell.is-today      { background: var(--sky-light); }
+
+.day-num {
+  font-family: 'DM Mono', monospace;
+  font-size: .78rem;
+  font-weight: 500;
+  color: var(--ink);
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  margin-bottom: 4px;
+}
+.day-cell.is-today .day-num {
+  background: var(--sky);
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(26,108,255,.4);
+}
+.day-cell.sun .day-num         { color: #d94f4f; }
+.day-cell.sat .day-num         { color: var(--sky); }
+.day-cell.other-month .day-num { color: #c5d8ec; }
+.day-cell.is-today.sun .day-num,
+.day-cell.is-today.sat .day-num { color: #fff; }
+
+/* ── MEMBER CARD ── */
+.member-card {
+  background: linear-gradient(135deg, var(--sky) 0%, var(--teal) 100%);
+  border-radius: var(--card-r);
+  padding: 7px 9px;
+  margin-top: 3px;
+  cursor: pointer;
+  animation: cardSlide .28s cubic-bezier(.22,.68,0,1.2) both;
+  box-shadow: 0 3px 12px rgba(26,108,255,.28);
+  transition: transform .18s, box-shadow .18s;
+  position: relative;
+  overflow: hidden;
+}
+.member-card.red {
+  background: linear-gradient(135deg, #e83a3a 0%, #ff6b6b 100%);
+  box-shadow: 0 3px 12px rgba(232,58,58,.28);
+}
+.member-card.red:hover {
+  box-shadow: 0 8px 22px rgba(232,58,58,.38);
+}
+.member-card::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(120deg, rgba(255,255,255,.18) 0%, transparent 60%);
+  pointer-events: none;
+}
+@keyframes cardSlide {
+  from { opacity:0; transform:translateY(6px) scale(.96); }
+  to   { opacity:1; transform:translateY(0) scale(1); }
+}
+.member-card:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 22px rgba(26,108,255,.38);
+}
+.card-name {
+  font-size: .72rem;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.card-sub {
+  font-size: .62rem;
+  color: rgba(255,255,255,.82);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* ── STATUS BAR ── */
+.status-bar {
+  max-width: 1160px;
+  margin: 16px auto 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: .73rem;
+  color: var(--muted);
+  min-height: 22px;
+}
+.spinner {
+  width: 15px; height: 15px;
+  border: 2px solid var(--border);
+  border-top-color: var(--sky);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.badge { border-radius: 4px; padding: 2px 8px; font-size: .65rem; font-weight: 700; }
+.badge.ok  { background:#e6f9f4; color:#0f7a5a; border:1px solid #9de0cc; }
+.badge.err { background:#fff0ef; color:#c0392b; border:1px solid #f5b7b1; }
+
+/* ── LOADING SCREEN ── */
+.loading-screen {
+  position: fixed; inset: 0;
+  background: var(--white);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  z-index: 999;
+  transition: opacity .4s;
+}
+.loading-screen.hidden { opacity: 0; pointer-events: none; }
+.loading-logo {
+  width: 58px; height: 58px;
+  background: linear-gradient(140deg, var(--sky), var(--teal));
+  border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px;
+  box-shadow: 0 8px 24px rgba(26,108,255,.3);
+}
+.loading-text { font-size: .78rem; color: var(--muted); letter-spacing: .07em; }
+.loading-dots span {
+  display: inline-block;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--sky);
+  margin: 0 3px;
+  animation: bounce .9s infinite;
+}
+.loading-dots span:nth-child(2) { animation-delay: .15s; }
+.loading-dots span:nth-child(3) { animation-delay: .30s; }
+@keyframes bounce {
+  0%,80%,100% { transform: translateY(0); opacity:.4; }
+  40%          { transform: translateY(-8px); opacity:1; }
+}
+
+/* ── MODAL ── */
+.overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(12,30,53,.52);
+  backdrop-filter: blur(4px);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.overlay.open { display: flex; }
+.modal {
+  background: var(--white);
+  border-radius: 22px;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  animation: modalPop .25s cubic-bezier(.22,.68,0,1.2);
+}
+@keyframes modalPop {
+  from { opacity:0; transform:scale(.92) translateY(16px); }
+  to   { opacity:1; transform:scale(1) translateY(0); }
+}
+.modal-hero {
+  background: linear-gradient(135deg, var(--ink) 0%, #1a3a5c 100%);
+  padding: 28px 28px 22px;
+  position: relative;
+}
+.modal-close {
+  position: absolute; top: 16px; right: 16px;
+  width: 32px; height: 32px;
+  background: rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 50%;
+  color: #fff;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .2s;
+  line-height: 1;
+}
+.modal-close:hover { background: rgba(255,255,255,.25); }
+.modal-tag {
+  font-size: .65rem;
+  font-weight: 700;
+  letter-spacing: .14em;
+  color: var(--teal);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.modal-name {
+  font-family: 'Shippori Mincho', serif;
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: #fff;
+}
+.modal-date-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-family: 'DM Mono', monospace;
+  font-size: .72rem;
+  color: rgba(255,255,255,.75);
+  margin-top: 10px;
+}
+.modal-body { padding: 20px 28px 28px; }
+.info-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--border);
+}
+.info-row:last-child { border-bottom: none; }
+.info-icon {
+  width: 36px; height: 36px;
+  background: var(--sky-light);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .95rem;
+  flex-shrink: 0;
+}
+.info-label { font-size: .65rem; color: var(--muted); font-weight: 500; letter-spacing: .07em; margin-bottom: 2px; }
+.info-value { font-size: .92rem; font-weight: 600; color: var(--ink); }
+</style>
+</head>
+<body>
+
+<!-- パスワード画面 -->
+<div id="passwordScreen" style="
+  position: fixed; inset: 0;
+  background: linear-gradient(135deg, #0c1e35 0%, #1a3a5c 100%);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999; padding: 20px;
+">
+  <div style="
+    background: #fff; border-radius: 22px;
+    padding: 48px 40px; max-width: 380px; width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    text-align: center;
+  ">
+    <div style="
+      width: 60px; height: 60px; margin: 0 auto 20px;
+      background: linear-gradient(140deg, #1a6cff, #00bfae);
+      border-radius: 16px; display: flex; align-items: center;
+      justify-content: center; font-size: 28px;
+      box-shadow: 0 6px 20px rgba(26,108,255,.35);
+    ">📋</div>
+    <h2 style="
+      font-family: 'Shippori Mincho', serif;
+      font-size: 1.4rem; color: #0c1e35;
+      margin-bottom: 6px; letter-spacing: .04em;
+    ">入会者カレンダー</h2>
+    <p style="font-size: .75rem; color: #8ba5be; margin-bottom: 28px; letter-spacing: .06em;">
+      MEMBER SCHEDULE CALENDAR
+    </p>
+    <input id="passwordInput" type="password" placeholder="パスワードを入力" style="
+      width: 100%; padding: 13px 16px;
+      border: 1.5px solid #d8e6f5; border-radius: 10px;
+      font-size: .9rem; font-family: 'Noto Sans JP', sans-serif;
+      color: #0c1e35; outline: none;
+      transition: border-color .2s;
+      margin-bottom: 12px;
+    " onkeydown="if(event.key==='Enter') checkPassword()">
+    <div id="passwordError" style="
+      font-size: .73rem; color: #e83a3a;
+      margin-bottom: 10px; min-height: 18px;
+    "></div>
+    <button onclick="checkPassword()" style="
+      width: 100%; padding: 13px;
+      background: linear-gradient(135deg, #1a6cff, #00bfae);
+      border: none; border-radius: 10px;
+      color: #fff; font-size: .9rem; font-weight: 700;
+      font-family: 'Noto Sans JP', sans-serif;
+      cursor: pointer; letter-spacing: .06em;
+      box-shadow: 0 4px 16px rgba(26,108,255,.35);
+      transition: opacity .2s;
+    " onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
+      ログイン
+    </button>
+  </div>
+</div>
+
+
+<!-- ローディング画面 -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="loading-logo">📋</div>
+  <div class="loading-dots"><span></span><span></span><span></span></div>
+  <div class="loading-text">スプレッドシートからデータを読み込み中…</div>
+</div>
+
+<!-- ヘッダー -->
+<header class="page-header">
+  <div class="header-left">
+    <div class="logo-mark">📋</div>
+    <div class="header-text">
+      <h1>入会者カレンダー</h1>
+      <p>MEMBER SCHEDULE CALENDAR</p>
+    </div>
+  </div>
+  <button class="reload-btn" id="reloadBtn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+    </svg>
+    データを再取得
+  </button>
+</header>
+
+<!-- 統計チップ -->
+<div class="status-bar" id="statusBar"></div>
+
+<!-- カレンダー -->
+<div class="cal-card">
+  <div class="cal-nav">
+    <button class="nav-btn" id="prevBtn">&#8249;</button>
+    <div>
+      <div class="month-title" id="monthTitle"></div>
+      <div class="year-sub"    id="yearSub"></div>
+    </div>
+    <button class="nav-btn" id="nextBtn">&#8250;</button>
+  </div>
+  <div class="dow-row">
+    <div class="dow-cell">日</div>
+    <div class="dow-cell">月</div>
+    <div class="dow-cell">火</div>
+    <div class="dow-cell">水</div>
+    <div class="dow-cell">木</div>
+    <div class="dow-cell">金</div>
+    <div class="dow-cell">土</div>
+  </div>
+  <div class="cal-grid" id="calGrid"></div>
+</div>
+
+<!-- ステータスバー -->
+<div class="stats-strip" id="statsStrip"></div>
+
+<!-- 詳細モーダル -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-hero">
+      <button class="modal-close" id="modalClose">✕</button>
+      <div class="modal-tag">入会者詳細</div>
+      <div class="modal-name" id="mName"></div>
+      <div class="modal-date-badge">📅 <span id="mDate"></span></div>
+    </div>
+    <div class="modal-body">
+      <div class="info-row">
+        <div class="info-icon">⚧️</div>
+        <div><div class="info-label">性　別</div><div class="info-value" id="mGender"></div></div>
+      </div>
+      <div class="info-row">
+        <div class="info-icon">🏫</div>
+        <div><div class="info-label">学　年</div><div class="info-value" id="mGrade"></div></div>
+      </div>
+      <div class="info-row">
+        <div class="info-icon">👕</div>
+        <div><div class="info-label">Tシャツサイズ</div><div class="info-value" id="mSize"></div></div>
+      </div>
+      <div class="info-row">
+        <div class="info-icon">📍</div>
+        <div><div class="info-label">受講場所</div><div class="info-value" id="mLocation"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  設定
+// ══════════════════════════════════════════════
+const API_URL   = 'https://script.google.com/macros/s/AKfycbxT-X0BdGWB3M6KLdy8p9EntyfQ3MMY1zlM_AiPudYCfEHIEsTFr5HB_NaSIYhxFjJlJQ/exec';
+const MONTHS_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MONTHS_JP = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+
+// ══════════════════════════════════════════════
+//  状態
+// ══════════════════════════════════════════════
+let members = [];
+const today = new Date();
+let cur = { y: today.getFullYear(), m: today.getMonth() };
+
+// ══════════════════════════════════════════════
+//  JSONP データ取得
+// ══════════════════════════════════════════════
+function fetchData() {
+  setStatus('loading', 'データを取得中…');
+
+  const cbName = '__gasCallback_' + Date.now();
+  let done = false;
+
+  // 12秒タイムアウト
+  const timer = setTimeout(() => {
+    if (done) return;
+    done = true;
+    cleanup(cbName);
+    setStatus('error', 'タイムアウト：データの取得に失敗しました。「データを再取得」ボタンをお試しください。');
+    hideLoadingScreen();
+  }, 12000);
+
+  // グローバルコールバックを登録
+  window[cbName] = function(data) {
+    if (done) return;
+    done = true;
+    clearTimeout(timer);
+    cleanup(cbName);
+    members = Array.isArray(data) ? data : [];
+    const t = new Date();
+    setStatus('ok', `${members.length}件取得済み（${t.getHours()}:${pad(t.getMinutes())} 更新）`);
+    render();
+    hideLoadingScreen();
+  };
+
+  // <script>タグを動的に挿入してGASへリクエスト
+  const script = document.createElement('script');
+  script.id  = cbName + '_el';
+  script.src = API_URL + '?callback=' + cbName;
+  script.onerror = function() {
+    if (done) return;
+    done = true;
+    clearTimeout(timer);
+    cleanup(cbName);
+    setStatus('error', 'スクリプトの読み込みに失敗しました。URLまたはGASのデプロイ設定を確認してください。');
+    hideLoadingScreen();
+  };
+  document.body.appendChild(script);
+}
+
+function cleanup(cbName) {
+  delete window[cbName];
+  const el = document.getElementById(cbName + '_el');
+  if (el) el.remove();
+}
+
+function hideLoadingScreen() {
+  const ls = document.getElementById('loadingScreen');
+  ls.classList.add('hidden');
+  setTimeout(() => { ls.style.display = 'none'; }, 450);
+}
+
+// ══════════════════════════════════════════════
+//  ユーティリティ
+// ══════════════════════════════════════════════
+function pad(n) { return String(n).padStart(2, '0'); }
+function dateKey(y, m, d) { return `${y}/${pad(m + 1)}/${pad(d)}`; }
+function parseKey(str) {
+  const [y, m, d] = str.replace(/-/g, '/').split('/').map(Number);
+  return { y, m: m - 1, d };
+}
+function buildMap(data) {
+  const map = {};
+  data.forEach(p => {
+    const { y, m, d } = parseKey(p.startDate);
+    const k = dateKey(y, m, d);
+    (map[k] = map[k] || []).push(p);
+  });
+  return map;
+}
+function esc(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── 赤カードにする会場リスト ──────────────────
+// ※ スプレッドシートの「受講場所」列の表記と完全一致で判定します
+const RED_VENUES = [
+  '大和SC陸上競技場',
+  'レモンガススタジアム平塚',
+  '藤沢',
+  '綾瀬市民SC陸上競技場',
+];
+function isRedVenue(location) {
+  return RED_VENUES.some(v => String(location).includes(v));
+}
+
+// ══════════════════════════════════════════════
+//  カレンダー描画
+// ══════════════════════════════════════════════
+function render() {
+  const { y, m } = cur;
+  document.getElementById('monthTitle').textContent = MONTHS_EN[m];
+  document.getElementById('yearSub').textContent    = y + ' · ' + MONTHS_JP[m];
+
+  const map          = buildMap(members);
+  const grid         = document.getElementById('calGrid');
+  const firstDow     = new Date(y, m, 1).getDay();
+  const daysInMonth  = new Date(y, m + 1, 0).getDate();
+  const daysInPrev   = new Date(y, m, 0).getDate();
+
+  grid.innerHTML = '';
+
+  // 前月の余り
+  for (let i = firstDow - 1; i >= 0; i--) {
+    const pm = m === 0 ? 11 : m - 1;
+    const py = m === 0 ? y - 1 : y;
+    grid.appendChild(makeCell(py, pm, daysInPrev - i, true, map));
+  }
+  // 当月
+  for (let d = 1; d <= daysInMonth; d++) {
+    const isT = d === today.getDate() && m === today.getMonth() && y === today.getFullYear();
+    grid.appendChild(makeCell(y, m, d, false, map, isT));
+  }
+  // 翌月の余り
+  const total = firstDow + daysInMonth;
+  const trail = total % 7 === 0 ? 0 : 7 - (total % 7);
+  for (let d = 1; d <= trail; d++) {
+    const nm = m === 11 ? 0 : m + 1;
+    const ny = m === 11 ? y + 1 : y;
+    grid.appendChild(makeCell(ny, nm, d, true, map));
+  }
+
+  renderStats();
+}
+
+function makeCell(y, m, d, other, map, isToday = false) {
+  const dow  = new Date(y, m, d).getDay();
+  const cell = document.createElement('div');
+  cell.className = ['day-cell',
+    other   ? 'other-month' : '',
+    isToday ? 'is-today'    : '',
+    dow === 0 ? 'sun' : '',
+    dow === 6 ? 'sat' : '',
+  ].filter(Boolean).join(' ');
+
+  const numEl = document.createElement('div');
+  numEl.className   = 'day-num';
+  numEl.textContent = d;
+  cell.appendChild(numEl);
+
+  const k = dateKey(y, m, d);
+  (map[k] || []).forEach((person, i) => {
+    const card = document.createElement('div');
+    card.className = 'member-card' + (isRedVenue(person.location) ? ' red' : '');
+    card.style.animationDelay = (i * 0.06) + 's';
+    card.innerHTML = `
+      <div class="card-name">${esc(person.name)}</div>
+      <div class="card-sub">${esc(person.grade)} · ${esc(person.location)}</div>`;
+    card.addEventListener('click', () => openModal(person));
+    cell.appendChild(card);
+  });
+  return cell;
+}
+
+// ══════════════════════════════════════════════
+//  学年判定（小学生 / 中学生以上）
+// ══════════════════════════════════════════════
+function isElementary(grade) {
+  // 「小」が含まれていれば小学生、それ以外（中・高・その他）は中学生以上
+  return String(grade).includes('小');
+}
+
+// ══════════════════════════════════════════════
+//  統計チップ
+// ══════════════════════════════════════════════
+function renderStats() {
+  const { y, m } = cur;
+  const inMonth = members.filter(p => {
+    const { y: py, m: pm } = parseKey(p.startDate);
+    return py === y && pm === m;
+  });
+
+  // 会場ごとに { total, elem（小学生）, jh（中学生以上）} を集計
+  const locMap = {};
+  inMonth.forEach(p => {
+    if (!locMap[p.location]) locMap[p.location] = { total: 0, elem: 0, jh: 0 };
+    locMap[p.location].total++;
+    if (isElementary(p.grade)) locMap[p.location].elem++;
+    else                        locMap[p.location].jh++;
+  });
+
+  // 今月全体の小学生・中学生以上
+  const totalElem = inMonth.filter(p => isElementary(p.grade)).length;
+  const totalJh   = inMonth.length - totalElem;
+
+  const purple = '#8b5cf6';
+  let html = `
+    <div class="stat-chip">
+      <div class="dot"></div>
+      今月：<b>${inMonth.length}名</b>
+      <span style="color:var(--muted);font-weight:400;font-size:.68rem;">（小学生 ${totalElem}名 / 中学生以上 ${totalJh}名）</span>
+    </div>
+    <div class="stat-chip"><div class="dot" style="background:var(--teal)"></div>全体：<b>${members.length}名</b></div>`;
+
+  Object.entries(locMap).forEach(([loc, s]) => {
+    html += `
+      <div class="stat-chip">
+        <div class="dot" style="background:${purple}"></div>
+        ${esc(loc)}：<b>${s.total}名</b>
+        <span style="color:var(--muted);font-weight:400;font-size:.68rem;">（小学生 ${s.elem}名 / 中学生以上 ${s.jh}名）</span>
+      </div>`;
+  });
+  document.getElementById('statsStrip').innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+//  モーダル
+// ══════════════════════════════════════════════
+function openModal(p) {
+  const { y, m, d } = parseKey(p.startDate);
+  document.getElementById('mName').textContent     = p.name;
+  document.getElementById('mDate').textContent     = `${y}年${m + 1}月${d}日 開始`;
+  document.getElementById('mGender').textContent   = p.gender;
+  document.getElementById('mGrade').textContent    = p.grade;
+  document.getElementById('mSize').textContent     = p.size + ' cm';
+  document.getElementById('mLocation').textContent = p.location;
+  document.getElementById('overlay').classList.add('open');
+}
+function closeModal() { document.getElementById('overlay').classList.remove('open'); }
+document.getElementById('modalClose').addEventListener('click', closeModal);
+document.getElementById('overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('overlay')) closeModal();
+});
+
+// ══════════════════════════════════════════════
+//  ナビゲーション
+// ══════════════════════════════════════════════
+document.getElementById('prevBtn').addEventListener('click', () => {
+  cur.m--; if (cur.m < 0)  { cur.m = 11; cur.y--; } render();
+});
+document.getElementById('nextBtn').addEventListener('click', () => {
+  cur.m++; if (cur.m > 11) { cur.m = 0;  cur.y++; } render();
+});
+document.getElementById('reloadBtn').addEventListener('click', fetchData);
+
+// ══════════════════════════════════════════════
+//  ステータスバー
+// ══════════════════════════════════════════════
+function setStatus(type, msg) {
+  const bar = document.getElementById('statusBar');
+  if (type === 'loading') {
+    bar.innerHTML = `<div class="spinner"></div>${msg}`;
+  } else if (type === 'ok') {
+    bar.innerHTML = `<span class="badge ok">✓ 取得完了</span>${msg}`;
+  } else {
+    bar.innerHTML = `<span class="badge err">エラー</span>${msg}`;
+  }
+}
+
+// ══════════════════════════════════════════════
+//  初期化
+// ══════════════════════════════════════════════
+render();      // まず空カレンダーを表示
+// fetchData はパスワード認証後に呼び出す
+
+// ══════════════════════════════════════════════
+//  パスワード認証
+// ══════════════════════════════════════════════
+const CORRECT_PASSWORD = '100200400'; // ← ここを好きなパスワードに変更してください
+
+function checkPassword() {
+  const input = document.getElementById('passwordInput').value;
+  const errEl = document.getElementById('passwordError');
+  if (input === CORRECT_PASSWORD) {
+    document.getElementById('passwordScreen').style.display = 'none';
+    fetchData(); // 認証後にデータ取得開始
+  } else {
+    errEl.textContent = 'パスワードが違います。もう一度お試しください。';
+    document.getElementById('passwordInput').value = '';
+    document.getElementById('passwordInput').focus();
+  }
+}
+
+// パスワード入力欄のフォーカス時に枠線を青に
+document.getElementById('passwordInput').addEventListener('focus', function() {
+  this.style.borderColor = '#1a6cff';
+});
+document.getElementById('passwordInput').addEventListener('blur', function() {
+  this.style.borderColor = '#d8e6f5';
+});
+
+</script>
+</body>
+</html>
